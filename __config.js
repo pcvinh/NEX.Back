@@ -1,6 +1,6 @@
 /* __config constant */
 
-var is_prod = false;
+var is_prod = true;
 
 /* database */ 
 var db_username = is_prod ? 'postgres' : 'postgres';
@@ -29,7 +29,7 @@ var debug = [
 	true, // 1 : RADAR
 	true, // 2 : POST
 	true, // 3 : NOTIFY
-	true  // 4 : ME
+	true,  // 4 : ME
 	true  // 5 : PROFILE
 ];
 
