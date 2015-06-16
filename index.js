@@ -3,6 +3,7 @@ var config = require('./__config.js');
 var pubsub = require('./__pubsub.js');
 var logger = require('./__logging.js');
 
+var util = require('util');
 var express = require('express');
 var bodyParser = require('body-parser');
 var multer = require('multer'); 
