@@ -1,6 +1,7 @@
 var config = require('./__config.js');
 var db = require('./__postgres.js');
 var pubsub = require('./__pubsub.js');
+var logger = require('./__logging.js');
 
 var request = require('request');
 var jsonwebtoken = require('jsonwebtoken');

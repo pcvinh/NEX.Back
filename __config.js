@@ -1,6 +1,6 @@
 /* __config constant */
 
-var is_prod = true;
+var is_prod = false;
 
 /* database */ 
 var db_username = is_prod ? 'postgres' : 'postgres';
@@ -25,14 +25,15 @@ var max_channels_per_favourite_radar = 5;
 	'ME' : 4
 };*/
 var debug = [
-	false, // LOGIN
-	false, // RADAR
-	false, // POST
-	false, // NOTIFY
-	false  // ME
+	true, // 0 : LOGIN
+	true, // 1 : RADAR
+	true, // 2 : POST
+	true, // 3 : NOTIFY
+	true  // 4 : ME
+	true  // 5 : PROFILE
 ];
 
-var log_path = '';
+var log_path = 'logs/';
 
 module.exports = {
 	DB_USERNAME : db_username,

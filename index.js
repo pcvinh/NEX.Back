@@ -1,6 +1,7 @@
 var nex = require('./nex.js');
 var config = require('./__config.js');
 var pubsub = require('./__pubsub.js');
+var logger = require('./__logging.js');
 
 var express = require('express');
 var bodyParser = require('body-parser');
@@ -78,17 +79,18 @@ app.post('/signup_basic_avatar/:id', multer({
 			fs.mkdirSync(newDestination);
 		}
 		if (stat && !stat.isDirectory()) {
-			throw new Error('Directory cannot be created because an inode of a different type exists at "' + dest + '"');
+			logger.error('Directory cannot be created because an inode of a different type exists at "' + newDestination + '"');
+			//throw new Error('Directory cannot be created because an inode of a different type exists at "' + dest + '"');
 		}
-		return newDestination
+		return newDestination;
 	}
 }), function(req, res){
 	var token = req.body.Token;
-	
+	logger.info('[POST]/signup_basic_avatar/'+req.params.id+'/ ({token : '+token+'})', 0);
 	if ( Object.keys(req.files).length === 0 ) {
-		console.log('no files uploaded');
+		logger.log('signup_basic_avatar no files uploaded');
 	} else {
-		console.log(req.files)
+		logger.log(req.files)
 
 		var files = req.files.file1;
 		if (!util.isArray(req.files.file1)) {
@@ -379,7 +381,7 @@ var _notify = function() {
 	var map = {};
 	
 	function push(userid, socketid) {
-		console.log('_notify.map push('+userid+','+socketid+')');
+		logger.info('_notify.map push('+userid+','+socketid+')', 3);
 		if(userid in map) { // already exist
 			map[userid].push(socketid);
 		} else {
@@ -389,7 +391,7 @@ var _notify = function() {
 	}
 	
 	function remove(userid, socketid) {
-		console.log('_notify.map remove('+userid+','+socketid+')');
+		logger.info('_notify.map remove('+userid+','+socketid+')', 3);
 		if((userid in map) && map[userid].length > 1) {
 			var index = map[userid].indexOf(socketid);
 			map[userid].splice(index, 1);
@@ -400,7 +402,7 @@ var _notify = function() {
 	}
 	
 	function emit(userid, message) {
-		console.log('_notify.map emit('+userid+','+message+') length ' + map[userid].length);
+		logger.info('_notify.map emit('+userid+','+message+') length ' + map[userid].length, 3);
 		for(i in map[userid]) {
 			io.to(map[userid][i]).emit('message', message);
 		}
@@ -435,6 +437,6 @@ io.on('connection', function(socket){
 //////////////////////////////////////////////////////////////////////
  
 server.listen(app.get('port'), function() {
-  console.log("Node app is running at localhost:" + app.get('port'));
-  console.log(__dirname);
+  logger.log("Node app is running at localhost: " + app.get('port'));
+  logger.log("Running at folder: " + __dirname);
 });

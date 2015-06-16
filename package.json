@@ -16,7 +16,8 @@
 	"pg" : "*",
 	"password-hash":"*",
 	"lodash" : "*",
-	"socket.io" : "*"
+	"socket.io" : "*",
+	"winston" : "*"
   },
   "engines": {
     "node": "0.10.x"

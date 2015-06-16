@@ -1,6 +1,7 @@
 /* __postgres wrapper */
 
 var config = require('./__config.js');
+var logger = require('./__logging.js');
 var pg = require('pg');
 
 const conString = 'postgres://'+config.DB_USERNAME+':'+config.DB_PASSWORD+'@'+config.DB_HOST+'/'+config.DB_NAME;
@@ -12,7 +13,7 @@ query = function(statement, callback) {
 				if(!err) return false;
 
 				done(client);
-				console.log('Error from query ('+statement+'): ' + err);
+				logger.error('Error from query ('+statement+'): ' + err);
 				return true;
 			};
 			
@@ -58,7 +59,7 @@ insert_or_update = function(table, id, array_fields, array_values, is_insert, ca
 				if(!err) return false;
 
 				done(client);
-				console.log('Error from query ('+statement+'): ' + err);
+				logger.error('Error from query ('+statement+'): ' + err);
 				return true;
 			};
 			
