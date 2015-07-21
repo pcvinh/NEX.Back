@@ -24,7 +24,6 @@ query = function(statement, callback) {
 				
 				done();
 				callback(null, result);
-				client.end();
 			});
 		});
 	} catch(err) {

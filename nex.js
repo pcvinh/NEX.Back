@@ -20,12 +20,12 @@ signin = function(email, password, callback) {
 		if(err) return callback(err);
 		
 		if(result.rows.length > 0) { // SIGN IN. check password. 
-				var hash_password = hash.generate(password);
+				//var hash_password = hash.generate(password);
 				
 				if(hash.verify(password, result.rows[0].password)) { // sign in success. return token.					
 					if(result.rows[0].nickname) { // Sign IN success
 						var token = jsonwebtoken.sign({ _id: result.rows[0]._id, nickname : result.rows[0].nickname, avatar : result.rows[0].avatar}, config.JWT_SECRET);
-						callback(null, {retcode: 0, token : token, avatar : result.rows[0].avatar, nickname : result.rows[0].nickname});
+						callback(null, {retcode: 0, token : token, id : result.rows[0]._id,  avatar : result.rows[0].avatar, nickname : result.rows[0].nickname});
 					} else { // Force to Sign UP nickname
 						callback(null, {retcode: 1, id : result.rows[0]._id});
 					}
@@ -49,55 +49,6 @@ _signup = function(email, hash_password, callback) {
 	});
 }
 
-/*
-signup_basic_avatar_upload = function( callback) {
-	
-}
-
-function _get_random_avatar() {
-	var rad_no = Math.floor((Math.random() * 20) + 1);
-	switch(rad_no) {
-	case 0: return "after_boom.png"; 
-	case 1: return "bad_egg.png"; 
-	case 2: return "bad_smile.png"; 
-	case 3: return "beaten.png"; 
-	case 4: return "default.png"; 
-	case 5: return "eyes_droped.png"; 
-	case 6: return "girl.png"; 
-	case 7: return "greedy.png"; 
-	case 8: return "grimace.png"; 
-	case 9: return "haha.png"; 
-	case 10: return "happy.png"; 	
-	case 11: return "horror.png"; 
-	case 12: return "money.png"; 
-	case 13: return "nothing_to_say.png"; 
-	case 14: return "scorn.png"; 
-	case 15: return "secret_smile.png"; 
-	case 16: return "shame.png"; 
-	case 17: return "super_man.png"; 
-	case 18: return "victory.png"; 
-	case 19: return "haha.png"; 
-	case 20: return "happy.png"; 	
-	}
-};
-
-signup_basic = function(id, avatar, nickname, callback) {
-	if(typeof nickname != 'undefined' && nickname != null && nickname != '') {
-		if(!(typeof avatar != 'undefined' && avatar != null && avatar != '')) {
-			avatar = _get_random_avatar();
-		}
-	} else {
-		return callback(null, {retcode: -1});
-	}
-	
-	var statement = 'UPDATE "User" SET  nickname=\''+nickname+'\', avatar=\''+avatar+'\', profile_level = 1 WHERE _id = '+id;
-	db.query(statement, function(err, result) {
-		if(err) return callback(err);
-		
-		callback(null, {retcode: 0, token : token});
-	});
-}*/
-
 signup_basic_nickname = function(id, nickname, callback) {
 	var table = "User",
 	id = id,
@@ -108,7 +59,7 @@ signup_basic_nickname = function(id, nickname, callback) {
 		if(err) return callback(err);
 		
 		var token = jsonwebtoken.sign({ _id: id, nickname : nickname}, config.JWT_SECRET);
-		callback(null, {retcode: 0, token : token});
+		callback(null, {retcode: 0, token : token, id : id, nickname : nickname });
 	});
 }
 
@@ -123,7 +74,7 @@ signup_basic_avatar = function(token, avatar, callback) {
 		if(err) return callback(err);
 		
 		var token = jsonwebtoken.sign({ _id: id, nickname : nickname, avatar : avatar}, config.JWT_SECRET);
-		callback(null, {retcode: 0, token : token});
+		callback(null, {retcode: 0, token : token, nickname : nickname, avatar : avatar});
 	});
 }
 
@@ -207,10 +158,10 @@ create_radar_favourite = function(token, name, channels, geoloc, callback) {
 	var i=0;
 	var array_channel = '{';
 	while(i <channels.length - 1  && i < config.MAX_CHANNELS_PER_FAVOURITE_RADAR) {
-		array_channel += '\''+channels[i]+'\',';
+		array_channel += '"'+channels[i]+'",';
 		i++;
 	}
-	array_channel += '\''+channels[i]+'\'}';
+	array_channel += '"'+channels[i]+'"}';
 		
 	var statement = 'INSERT INTO "RadarFavourite"(_user_id, fav_name, channels) VALUES(\''+ user_id +'\',\''+ name +'\',\''+ array_channel +'\') RETURNING _id, fav_name';
 	db.query(statement, function(err, result) {
@@ -226,12 +177,25 @@ create_radar_favourite = function(token, name, channels, geoloc, callback) {
 /*********************************************
 
 **********************************************/
-create_post = function(token, channels, content, callback) {
+create_post = function(token, channels, content, photos, callback) {
 	var content = (typeof content != 'undefined') ? content : "";
 	var user_id = jsonwebtoken.decode(token)._id, avatar = jsonwebtoken.decode(token).avatar, nickname = jsonwebtoken.decode(token).nickname;
 	var array_channel = '{'+channels+'}';
 	
-	var statement = 'INSERT INTO "Post"( content, _user_id, expired_duration, channels) VALUES(\''+ content +'\','+user_id+', 5*60, \''+array_channel+'\' ) RETURNING _id, create_time';
+	var array_photos = '{';
+	var i = 0;
+	if(typeof photos === 'undefined') {
+		array_photos += '}';
+	} else {
+		while(i <photos.length - 1 ) {
+			array_photos += '"'+photos[i]+'",';
+			i++;
+		}		
+		array_photos += '"'+photos[i]+'"}';
+	}	
+	console.log(JSON.stringify(photos));
+	
+	var statement = 'INSERT INTO "Post"( content, _user_id, expired_duration, channels, photos) VALUES(\''+ content +'\','+user_id+', 5*60, \''+array_channel+'\', \''+array_photos+'\' ) RETURNING _id, create_time';
 	db.query(statement, function(err, result) {
 		if(err) return callback(err);
 		
@@ -392,9 +356,47 @@ create_post_comment = function(token, id, content, callback) {
 	});
 }
 
+create_question_answer = function(token, id, content, callback) {
+	var user_id = jsonwebtoken.decode(token)._id, nickname = jsonwebtoken.decode(token).nickname, avatar = jsonwebtoken.decode(token).avatar;
+	var statement = 'INSERT INTO "Comment"(_id,_entity_id, _user_id, content ) VALUES((select coalesce(MAX(_id),0) FROM "Comment" where _entity_id = '+id+') + 1,\''+ id +'\',\''+ user_id +'\', \''+content+'\') RETURNING _id, create_time,(select _user_id owner_id from "Post" where _id = '+id+'),(select array_accum( distinct channel) channels from "Relay" where _entity_id = '+id+' ), (select count(_id) no_comment from "Comment" where _entity_id = '+id+')';
+	db.query(statement, function(err, result) {
+		if(err) return callback(err);
+		
+		var owner_id = result.rows[0].owner_id, no_comment = result.rows[0].no_comment, channels = result.rows[0].channels;
+		Notification_util.alert(owner_id, {id:user_id, nickname:nickname, avatar: avatar}, 'answer your' , {id: id, name : 'question', type : 1});
+		
+		if(no_comment == 10 || no_comment == 99) { // this is to control the broadcast of comment <-- need to think about it again.
+			var i=0;		
+			while(i < channels.length) {
+				var msg = {'new':false,'type':1,'id':id,'i':{'c':no_comment}};
+				pubsub.publish(channels[i], msg);
+				i++;
+			}
+		} else {
+			//console.log('Wait until 10 comments to broadcast');
+		}
+		
+		var temp = {};
+		temp.id = result.rows[0]._id;
+		temp.owner = {};
+		temp.owner.id = user_id;
+		temp.owner.nickname = nickname;
+		temp.owner.avatar = avatar;
+		temp.content = content;
+		temp.metadata = {};
+		temp.metadata.create_time = result.rows[0].create_time;
+		temp.i = {};
+		temp.i.l = 0;
+			
+		callback(null, {retcode: 0, content : temp});
+	});
+}
+
+
 create_post_relay = function(token, id, channel, callback) {
 	var user_id = jsonwebtoken.decode(token)._id, nickname = jsonwebtoken.decode(token).nickname, avatar = jsonwebtoken.decode(token).avatar;
 	var statement = 'INSERT INTO "Relay"(_id,_entity_id, _user_id, channel ) VALUES((select coalesce(MAX(_id),0) FROM "Relay" where _entity_id = '+id+') + 1,\''+ id +'\',\''+ user_id +'\', \''+channel+'\') RETURNING (select _user_id owner_id from "Post" where _id = '+id+'),(select count(_id) count_channel from "Relay" where _entity_id = '+id+' AND channel like \''+channel+'\'), (select array_accum( distinct channel) channels from "Relay" where _entity_id = '+id+' ), (select count(_id) no_relay from "Relay" where _entity_id = '+id+')';
+	console.log(statement );
 	db.query(statement, function(err, result) {
 		if(err) return callback(err);
 		
@@ -410,6 +412,8 @@ create_post_relay = function(token, id, channel, callback) {
 			}			
 		}
 		
+		callback(null, {retcode: 0});
+		console.log(statement + ":" +JSON.stringify(channels) + "-"+ count_channel);
 		if(count_channel == 1){ // first time relay on this channel - hence broadcast
 			var statement = 'SELECT p._id pid, u._id uid, u.nickname, u.avatar, p.content, p.create_time, p.n_view, p.type t, '
 						+'c._id c_id, c._user_id c_owner_id, uu.nickname c_owner_nickname, uu.avatar c_owner_avatar, c.content c_content, '
@@ -418,7 +422,7 @@ create_post_relay = function(token, id, channel, callback) {
 						+'(select count(r._id) from "Relay" r where r._entity_id = p._id) as no_relay '
 							+'FROM "User" u INNER JOIN "Post" p LEFT JOIN "User" uu JOIN "Comment" c ON (uu._id = c._user_id) '
 							+'ON (p._answer_id = c._id AND p._id = c._entity_id) ON (p._user_id = u._id) '
-							+'WHERE  p._user_id = u._id AND p._id = '+id+')';
+							+'WHERE  p._user_id = u._id AND p._id = '+id;
 			db.query(statement, function(err, result) {
 				if(err) return callback(err);
 				
@@ -451,7 +455,6 @@ create_post_relay = function(token, id, channel, callback) {
 					}
 					
 					pubsub.publish(channel, msg);
-					callback(null, {retcode: 0});
 			});
 		}
 	});
@@ -526,19 +529,27 @@ remove_comment_like = function(token, callback) {
 
 **********************************************/
 get_post_list = function(token, channels, from_id, callback) {
+	var user_id = jsonwebtoken.decode(token)._id;
 	var channels_condition = ' channel like \''+channels[0]+'\'';
 	for(var i = 1; i < channels.length; i ++) {
 		channels_condition+=' OR' + ' channel like \''+channels[i]+'\'';
+	}
+	var from_id_condition = '';
+	if(from_id > 0) {
+		from_id_condition = ' AND p._id < ' + from_id;
 	}
 	//var statement = 'SELECT p._id pid, u._id uid, u.nickname, u.avatar, p.content, p.create_time, p.n_view,(select count(c._id) from "Comment" c where c._entity_id = p._id) as no_comment, (select count(l._id) from "Like" l where l._entity_id = p._id) as no_like, (select count(r._id) from "Relay" r where r._entity_id = p._id) as no_relay FROM "Post" p,"User" u WHERE  p._user_id = u._id AND p._id IN (SELECT distinct _entity_id FROM "Relay" WHERE' + channels_condition + ')';
 	var statement = 'SELECT p._id pid, u._id uid, u.nickname, u.avatar, p.content, p.create_time, p.n_view, p.type t, '
 						+'c._id c_id, c._user_id c_owner_id, uu.nickname c_owner_nickname, uu.avatar c_owner_avatar, c.content c_content, '
 						+'(select count(c._id) from "Comment" c where c._entity_id = p._id) as no_comment, '
 						+'(select count(l._id) from "Like" l where l._entity_id = p._id) as no_like, '
-						+'(select count(r._id) from "Relay" r where r._entity_id = p._id) as no_relay '
+						+'(select count(r._id) from "Relay" r where r._entity_id = p._id) as no_relay, '
+						+'(select count(l._id) from "Like" l where l._entity_id = p._id AND l._user_id = '+user_id+') as no_my_like, '
+						+'(select count(r._id) from "Relay" r where r._entity_id = p._id AND r._user_id = '+user_id+') as no_my_relay '
 							+'FROM "User" u INNER JOIN "Post" p LEFT JOIN "User" uu JOIN "Comment" c ON (uu._id = c._user_id) '
 							+'ON (p._answer_id = c._id AND p._id = c._entity_id) ON (p._user_id = u._id) '
-							+'WHERE p._id IN (SELECT distinct _entity_id FROM "Relay" WHERE' + channels_condition + ')';
+							+'WHERE p._id IN (SELECT distinct _entity_id FROM "Relay" WHERE' + channels_condition + ')' + from_id_condition
+							+ ' ORDER BY p._id DESC LIMIT 10';
 	
 	
 	db.query(statement, function(err, result) {
@@ -561,6 +572,8 @@ get_post_list = function(token, channels, from_id, callback) {
 			msg.i.l = parseInt(result.rows[i].no_like);
 			msg.i.c = parseInt(result.rows[i].no_comment);
 			msg.i.r = parseInt(result.rows[i].no_relay - 1);
+			msg.i.my_l = (parseInt(result.rows[i].no_my_like) === 0) ? false : true;
+			msg.i.my_r = (parseInt(result.rows[i].no_my_relay) === 0) ? false : true;
 			if(result.rows[i].c_id != null) {
 				//'tks':{'id' : answer_id, 'owner' : {'id' : answer_owner_id, 'nickname' : answer_owner_nickname, 'avatar' : answer_owner_avatar} , 'content' : answer_content}
 				msg.tks = {};
@@ -579,7 +592,14 @@ get_post_list = function(token, channels, from_id, callback) {
 }
 
 get_post_detail = function(token, id, callback) {
-	var statement = 'SELECT p._id pid, p.type t, u._id uid, u.nickname, u.avatar, p.content, p.create_time, p.n_view,(select count(c._id) from "Comment" c where c._entity_id = p._id) as no_comment, (select count(l._id) from "Like" l where l._entity_id = p._id) as no_like, (select count(r._id) from "Relay" r where r._entity_id = p._id) as no_relay FROM "Post" p,"User" u WHERE p._id = \''+id+'\' AND p._user_id = u._id';
+	var user_id = jsonwebtoken.decode(token)._id;
+	var statement = 'SELECT p._id pid, p.type t, u._id uid, u.nickname, u.avatar, p.content, p.create_time, p.n_view,'+
+	'(select count(c._id) from "Comment" c where c._entity_id = p._id) as no_comment, '+
+	'(select count(l._id) from "Like" l where l._entity_id = p._id) as no_like, '+
+	'(select count(r._id) from "Relay" r where r._entity_id = p._id) as no_relay, '+
+	'(select count(l._id) from "Like" l where l._entity_id = p._id AND l._user_id = '+user_id+') as no_my_like, ' +
+	'(select count(r._id) from "Relay" r where r._entity_id = p._id AND r._user_id = '+user_id+') as no_my_relay ' +
+	'FROM "Post" p,"User" u WHERE p._id = \''+id+'\' AND p._user_id = u._id';
 	db.query(statement, function(err, result) {
 		if(err) return callback(err);
 		
@@ -599,14 +619,15 @@ get_post_detail = function(token, id, callback) {
 			temp.i.l = parseInt(result.rows[i].no_like);
 			temp.i.c = parseInt(result.rows[i].no_comment);
 			temp.i.r = parseInt(result.rows[i].no_relay - 1);
-			
+			temp.i.my_l = (parseInt(result.rows[i].no_my_like) === 0) ? false : true;
+			temp.i.my_r = (parseInt(result.rows[i].no_my_relay) === 0) ? false : true;
 		} 
 		callback(null, {retcode: 0, post_detail : temp});
 	});
 }
 
 get_post_comment_list = function(token, id, callback) {
-	var statement = 'SELECT c._id, c.content, c.create_time, u._id as uid, u.nickname, u.avatar , coalesce(array_length(c.likes,1),0) no_like  FROM "Comment" c JOIN "User" u ON (c._user_id = u._id) WHERE _entity_id = ' + id;
+	var statement = 'SELECT c._id, c.content, c.create_time, u._id as uid, u.nickname, u.avatar , coalesce(array_length(c.likes,1),0) no_like  FROM "Comment" c JOIN "User" u ON (c._user_id = u._id) WHERE _entity_id = ' + id + ' ORDER BY c._id DESC';
 	db.query(statement, function(err, result) {
 		if(err) return callback(err);
 		
@@ -645,27 +666,6 @@ get_comment_comment = function(token, callback) {
 /*********************************************
 
 **********************************************/
-create_chat_room = function(token, callback) {
-	var statement = '';
-	db.query(statement, function(err, result) {
-		if(err) return callback(err);
-		
-		callback(null, {retcode: 0, token : token});
-	});
-}
-
-join_chat_room = function(token, callback) {
-	var statement = '';
-	db.query(statement, function(err, result) {
-		if(err) return callback(err);
-		
-		callback(null, {retcode: 0, token : token});
-	});
-}
-
-/*********************************************
-
-**********************************************/
 get_profile_header = function(token, id, callback) { // list all badge
 	var statement = 'SELECT nickname, fullname, avatar, is_verified FROM "User" u LEFT JOIN "UserProfile" up ON (u._id = up._id) WHERE u._id =' + id;
 	db.query(statement, function(err, result) {
@@ -685,8 +685,19 @@ get_profile_header = function(token, id, callback) { // list all badge
 	});
 }
 
-get_profile_post_list = function(token, id, callback) {
-	var statement = 'SELECT p._id pid, p.type t, p._user_id uid, p.content, p.create_time, p.n_view,(select count(c._id) from "Comment" c where c._entity_id = p._id) as no_comment, (select count(l._id) from "Like" l where l._entity_id = p._id) as no_like, (select count(r._id) from "Relay" r where r._entity_id = p._id) as no_relay FROM "Post" p  WHERE p._user_id = ' + id;
+get_profile_post_list = function(token, id, from_id, callback) {	
+	var from_id_condition = '';
+	if(from_id > 0) {
+		from_id_condition = ' AND p._id < ' + from_id;
+	}
+	
+	var statement = 'SELECT p._id pid, p.type t, p._user_id uid, p.content, p.create_time, p.n_view,'+
+	'(select count(c._id) from "Comment" c where c._entity_id = p._id) as no_comment, '+
+	'(select count(l._id) from "Like" l where l._entity_id = p._id) as no_like, '+
+	'(select count(r._id) from "Relay" r where r._entity_id = p._id) as no_relay '+
+	'FROM "Post" p  WHERE p._user_id = ' + id + from_id_condition + ' ORDER BY pid DESC LIMIT 3';
+	
+	
 	db.query(statement, function(err, result) {
 		if(err) return callback(err);
 		
@@ -738,12 +749,13 @@ get_profile_other_info = function(token, callback) {
 		callback(null, {retcode: 0, token : token});
 	});
 }
-/*********************************************
 
+/*********************************************
+Notification Services
 **********************************************/
 notification_list = function(token, callback) {
 	var user_id = jsonwebtoken.decode(token)._id;
-	var statement = 'SELECT _id,subject, verb, object, type FROM "Notification" WHERE user_id = \'' + user_id + '\' AND viewed = FALSE';
+	var statement = 'SELECT n._id,subject, verb, object, n.type, p.content o_c FROM "Notification" n, "Post" p WHERE user_id = \''+user_id+'\' AND viewed = FALSE AND cast( n.object->>\'id\' as int) = p._id ORDER BY n._id ASC';
 	db.query(statement, function(err, result) {
 		if(err) return callback(err);
 		
@@ -756,6 +768,7 @@ notification_list = function(token, callback) {
 			temp.v = result.rows[i].verb;
 			temp.o = result.rows[i].object;
 			temp.t = result.rows[i].type;
+			temp.c = result.rows[i].o_c;
 			
 			notification_list.push(temp);
 			i++;
@@ -776,11 +789,11 @@ notification_view = function(token, id, callback) {
 }
 
 var Notification_util = function() {
-	function alert(owner_id, subject, verb, object) { // comment, like, relay
+	function alert(owner_id, subject, verb, object) { // subject: | verb: comment, like, relay -  | object Post(&question)
 		if(subject.id == owner_id) {
 			return;
 		}
-		var statement = 'INSERT INTO "Notification"(user_id, subject, verb, object, type) VALUES ('+owner_id+', \''+JSON.stringify(subject)+'\', \''+verb+'\', \''+JSON.stringify(object)+'\', 0) RETURNING _id';
+		var statement = 'INSERT INTO "Notification"(_id, user_id, subject, verb, object, type) VALUES ((select coalesce(MAX(_id),0) FROM "Notification" where user_id = '+owner_id+') + 1,'+owner_id+', \''+JSON.stringify(subject)+'\', \''+verb+'\', \''+JSON.stringify(object)+'\', 0) RETURNING _id';
 		db.query(statement, function(err, result) {
 			if(err) return;
 			
@@ -801,8 +814,139 @@ var Notification_util = function() {
 	}	
 }();
 
-/////////////////////////////////////////////
+/***************** me ************************
 
+**********************************************/
+get_my_profile_header = function(token, callback) { // list all badge
+	var id = jsonwebtoken.decode(token)._id;
+	var statement = 'SELECT nickname, fullname, avatar, is_verified FROM "User" u LEFT JOIN "UserProfile" up ON (u._id = up._id) WHERE u._id =' + id;
+	
+	db.query(statement, function(err, result) {
+		if(err) return callback(err);
+		
+		var i = 0;
+		var temp = {};
+		if( i < result.rows.length) {
+			temp.id = id;
+			temp.nickname = result.rows[i].nickname;
+			temp.fullname = result.rows[i].fullname;
+			temp.avatar = result.rows[i].avatar;
+			temp.is_verified = result.rows[i].is_verified;
+		}
+		
+		callback(null, {retcode: 0, profile : temp});
+	});
+}
+
+get_my_post_list = function(token, from_id, callback) {
+	var id = jsonwebtoken.decode(token)._id;
+	var from_id_condition = '';
+	if(from_id > 0) {
+		from_id_condition = ' AND p._id < ' + from_id;
+	}
+	var statement = 'SELECT p._id pid, p.type t, p._user_id uid, p.content, p.create_time, p.n_view,'+
+	'(select count(c._id) from "Comment" c where c._entity_id = p._id) as no_comment, '+
+	'(select count(l._id) from "Like" l where l._entity_id = p._id) as no_like, '+
+	'(select count(r._id) from "Relay" r where r._entity_id = p._id) as no_relay, '+
+	'(select count(l._id) from "Like" l where l._entity_id = p._id AND l._user_id = '+id+') as no_my_like '+
+	'FROM "Post" p  WHERE p._user_id = ' + id + from_id_condition + ' ORDER BY pid DESC LIMIT 3';
+	
+	
+	db.query(statement, function(err, result) {
+		if(err) return callback(err);
+		
+		var i = 0;
+		var post_list = [];
+		while( i < result.rows.length) {
+			var msg = {'new' : true};
+			msg.type = result.rows[i].t === null? 0 : result.rows[i].t;
+			msg.id = result.rows[i].pid;
+			msg.content = result.rows[i].content;
+			msg.metadata = {};
+			msg.metadata.create_time = result.rows[i].create_time;
+			msg.i = {};
+			msg.i.l = parseInt(result.rows[i].no_like);
+			msg.i.c = parseInt(result.rows[i].no_comment);
+			msg.i.r = parseInt(result.rows[i].no_relay - 1);
+			msg.i.my_l = (result.rows[i].no_my_like > 0) ? true : false;
+			post_list.push(msg);
+			i++;
+		}
+		
+		callback(null, {retcode: 0, post_list : post_list});
+	});
+}
+
+//////////////////////
+
+_update_password = function(id, hash_password, callback) {
+	var statement = 'UPDATE "User" set "password" = \''+hash_password+'\' WHERE _id = '+id;
+	db.query(statement, function(err, result) {
+		if(err) return callback(err);
+
+		callback(null, result);
+	});
+}
+
+change_my_password = function(token, old_password, new_password, callback) {
+	var id = jsonwebtoken.decode(token)._id,
+	nickname = jsonwebtoken.decode(token).nickname,
+	avatar = jsonwebtoken.decode(token).avatar;
+	
+	var statement = 'SELECT "_id", "nickname", "avatar","password" from "User" WHERE _id = \''+id+'\'';
+	db.query(statement, function(err, result) {
+		if(err) return callback(err);
+
+		if(result.rows.length > 0) { // SIGN IN. check password. 				
+			if(hash.verify(old_password, result.rows[0].password)) { // old_password correct. now update new_password & return new token
+				var hash_password = hash.generate(new_password);
+				_update_password(id, hash_password, function(err, result) {
+					if(err) return callback(err);
+					
+					console.log(JSON.stringify(result));
+					var token = jsonwebtoken.sign({ _id: id, nickname : nickname, avatar : avatar}, config.JWT_SECRET);
+					callback(null, {retcode: 0, token : token, avatar : avatar, nickname : nickname});
+				});
+			} else {	// wrong old_password.
+				console.log('wrong old_password.');
+				callback(null, {retcode: -1});
+			}
+		} else { // _id not exist - very rare & strange
+			console.log('_id not exist - very rare & strange');
+			callback(null, {retcode: -1});
+		}
+	});
+}
+
+change_my_basic_nickname = function(token, nickname, callback) {
+	var table = "User",
+	id = jsonwebtoken.decode(token)._id,
+	avatar = jsonwebtoken.decode(token).avatar,
+	array_fields = ["nickname"],
+	array_values = [nickname];
+	
+	db.insert_or_update(table, id, array_fields, array_values, false, function(err, result) {
+		if(err) return callback(err);
+		
+		var token = jsonwebtoken.sign({ _id: id, avatar : avatar, nickname : nickname}, config.JWT_SECRET);
+		callback(null, {retcode: 0, token : token});
+	});
+}
+
+change_my_basic_fullname = function(token, fullname, callback) {
+	var table = "UserProfile",
+	id = jsonwebtoken.decode(token)._id,
+	array_fields = ["fullname"],
+	array_values = [fullname];
+	
+	db.insert_or_update(table, id, array_fields, array_values, false, function(err, result) {
+		if(err) return callback(err);
+		
+		callback(null, {retcode: 0});
+	});
+}
+
+//////////////////////////////////////
 module.exports = {
 	signin : signin,
 	signup_basic_nickname : signup_basic_nickname,
@@ -817,6 +961,7 @@ module.exports = {
 	create_post_question : create_post_question,
 	create_post_like : create_post_like,
 	create_post_comment : create_post_comment,
+	create_question_answer : create_question_answer,
 	create_post_relay : create_post_relay,
 	create_comment_comment : create_comment_comment,
 	create_comment_like : create_comment_like,
@@ -829,10 +974,16 @@ module.exports = {
 	get_post_detail : get_post_detail,
 	get_post_comment_list : get_post_comment_list,
 	get_comment_comment : get_comment_comment,
-	create_chat_room : create_chat_room,
-	join_chat_room : join_chat_room,
+	
 	get_profile_header: get_profile_header,
 	get_profile_post_list: get_profile_post_list,
+	
 	notification_list : notification_list,
-	notification_view : notification_view
+	notification_view : notification_view,
+	
+	get_my_profile_header :get_my_profile_header,
+	get_my_post_list : get_my_post_list,
+	change_my_password : change_my_password,
+	change_my_basic_nickname : change_my_basic_nickname,
+	change_my_basic_fullname : change_my_basic_fullname
 }
