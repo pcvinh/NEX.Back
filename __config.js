@@ -1,6 +1,6 @@
 /* __config constant */
 
-var is_prod = false;
+var is_prod = true;
 
 /* database */ 
 var db_username = is_prod ? 'postgres' : 'postgres';

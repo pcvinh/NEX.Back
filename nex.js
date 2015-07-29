@@ -465,7 +465,7 @@ create_comment_comment = function(token, callback) {
 	db.query(statement, function(err, result) {
 		if(err) return callback(err);
 		
-		callback(null, {retcode: 0, token : token});
+		callback(null, {retcode: 0});
 	});
 }
 
@@ -474,7 +474,7 @@ create_comment_like = function(token, callback) {
 	db.query(statement, function(err, result) {
 		if(err) return callback(err);
 		
-		callback(null, {retcode: 0, token : token});
+		callback(null, {retcode: 0});
 	});
 }
 
@@ -485,7 +485,7 @@ remove_post = function(token, callback) {
 	db.query(statement, function(err, result) {
 		if(err) return callback(err);
 		
-		callback(null, {retcode: 0, token : token});
+		callback(null, {retcode: 0});
 	});
 }
 
@@ -494,7 +494,7 @@ remove_post_like = function(token, callback) {
 	db.query(statement, function(err, result) {
 		if(err) return callback(err);
 		
-		callback(null, {retcode: 0, token : token});
+		callback(null, {retcode: 0});
 	});
 }
 
@@ -503,7 +503,7 @@ remove_post_comment = function(token, callback) {
 	db.query(statement, function(err, result) {
 		if(err) return callback(err);
 		
-		callback(null, {retcode: 0, token : token});
+		callback(null, {retcode: 0});
 	});
 }
 
@@ -512,7 +512,7 @@ remove_comment_comment = function(token, callback) {
 	db.query(statement, function(err, result) {
 		if(err) return callback(err);
 		
-		callback(null, {retcode: 0, token : token});
+		callback(null, {retcode: 0});
 	});
 }
 
@@ -521,7 +521,7 @@ remove_comment_like = function(token, callback) {
 	db.query(statement, function(err, result) {
 		if(err) return callback(err);
 		
-		callback(null, {retcode: 0, token : token});
+		callback(null, {retcode: 0});
 	});
 }
 
@@ -659,7 +659,7 @@ get_comment_comment = function(token, callback) {
 	db.query(statement, function(err, result) {
 		if(err) return callback(err);
 		
-		callback(null, {retcode: 0, token : token});
+		callback(null, {retcode: 0});
 	});
 }
 
@@ -728,7 +728,7 @@ get_profile_detail = function(token, callback) {
 	db.query(statement, function(err, result) {
 		if(err) return callback(err);
 		
-		callback(null, {retcode: 0, token : token});
+		callback(null, {retcode: 0});
 	});
 }
 
@@ -737,7 +737,7 @@ get_profile_contact = function(token, callback) {
 	db.query(statement, function(err, result) {
 		if(err) return callback(err);
 		
-		callback(null, {retcode: 0, token : token});
+		callback(null, {retcode: 0});
 	});
 }
 
@@ -746,7 +746,7 @@ get_profile_other_info = function(token, callback) {
 	db.query(statement, function(err, result) {
 		if(err) return callback(err);
 		
-		callback(null, {retcode: 0, token : token});
+		callback(null, {retcode: 0});
 	});
 }
 
