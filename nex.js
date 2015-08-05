@@ -593,7 +593,7 @@ get_post_list = function(token, channels, from_id, callback) {
 
 get_post_detail = function(token, id, callback) {
 	var user_id = jsonwebtoken.decode(token)._id;
-	var statement = 'SELECT p._id pid, p.type t, u._id uid, u.nickname, u.avatar, p.content, p.create_time, p.n_view, p.photos'+
+	var statement = 'SELECT p._id pid, p.type t, u._id uid, u.nickname, u.avatar, p.content, p.create_time, p.n_view, p.photos, '+
 	'(select count(c._id) from "Comment" c where c._entity_id = p._id) as no_comment, '+
 	'(select count(l._id) from "Like" l where l._entity_id = p._id) as no_like, '+
 	'(select count(r._id) from "Relay" r where r._entity_id = p._id) as no_relay, '+
