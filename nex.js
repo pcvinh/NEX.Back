@@ -413,8 +413,8 @@ create_post_relay = function(token, id, channel, callback) {
 		}
 		
 		callback(null, {retcode: 0});
-		console.log(statement + ":" +JSON.stringify(channels) + "-"+ count_channel);
-		if(count_channel == 1){ // first time relay on this channel - hence broadcast
+		console.log(JSON.stringify(channels) + "-"+ count_channel);
+		if(count_channel <= 1){ // first time relay on this channel - hence broadcast
 			var statement = 'SELECT p._id pid, u._id uid, u.nickname, u.avatar, p.content, p.create_time, p.n_view, p.type t, '
 						+'c._id c_id, c._user_id c_owner_id, uu.nickname c_owner_nickname, uu.avatar c_owner_avatar, c.content c_content, '
 						+'(select count(c._id) from "Comment" c where c._entity_id = p._id) as no_comment, '
@@ -756,7 +756,7 @@ Notification Services
 **********************************************/
 notification_list = function(token, callback) {
 	var user_id = jsonwebtoken.decode(token)._id;
-	var statement = 'SELECT n._id,subject, verb, object, n.type, p.content o_c FROM "Notification" n, "Post" p WHERE user_id = \''+user_id+'\' AND viewed = FALSE AND cast( n.object->>\'id\' as int) = p._id ORDER BY n._id ASC';
+	var statement = 'SELECT n._id,subject, verb, object, n.type, p.content o_c FROM "Notification" n, "Post" p WHERE user_id = \''+user_id+'\' AND (n.ts > now() - interval \'15 days\') AND cast( n.object->>\'id\' as int) = p._id ORDER BY n._id ASC LIMIT 20';
 	db.query(statement, function(err, result) {
 		if(err) return callback(err);
 		
