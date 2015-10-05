@@ -347,6 +347,18 @@ app.get('/get_post_list', function(req, res) {
 	});
 });
 
+app.get('/get_post_list_by_channel', function(req, res) {
+	var token = req.query.token, channel = req.query.channel, from_id = req.query.from_id;
+	
+	nex.get_post_list_by_channel(token, channel, from_id, function(err, result) {
+		if(err) {
+			res.jsonp('there is error');
+		} else {
+			res.jsonp(result);
+		}
+	});
+});
+
 app.get('/get_post_detail', function(req, res) {
 	var token = req.query.token, id = req.query.id;
 	nex.get_post_detail(token, id, function(err, result) {

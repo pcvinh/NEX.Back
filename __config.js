@@ -5,8 +5,8 @@ var is_prod = true;
 /* database */ 
 var db_username = is_prod ? 'postgres' : 'postgres';
 var db_password = is_prod ? 'fKkg8GPb' : 'password';
-var db_host = is_prod ? '10.240.199.51' : 'localhost';
-//var db_host = is_prod ? '107.167.183.96' : 'localhost'; // this is to test at local nodejs connect to cloud database
+//var db_host = is_prod ? '10.240.199.51' : 'localhost';
+var db_host = is_prod ? '107.167.183.96' : 'localhost'; // this is to test at local nodejs connect to cloud database
 var db_name = 'NEX';
 
 

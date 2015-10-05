@@ -219,6 +219,8 @@ create_post = function(token, channels, content, photos, callback) {
 			msg.i.l = 0;
 			msg.i.c = 0;
 			msg.i.r = 0;
+			msg.orgin = channel;
+			msg.is_photos = (typeof photos !== 'undefined') ? true : false;
 			
 			var i=0;
 			while(i < channels.length) {
@@ -265,6 +267,8 @@ create_post_question = function(token, channels, content, callback) { // questio
 			msg.i.l = 0;
 			msg.i.c = 0;
 			msg.i.r = 0;
+			msg.orgin = channel;
+			msg.is_photos = (typeof photos !== 'undefined') ? true : false;
 			
 			var i=0;
 			while(i < channels.length) {
@@ -415,7 +419,7 @@ create_post_relay = function(token, id, channel, callback) {
 		callback(null, {retcode: 0});
 		console.log(JSON.stringify(channels) + "-"+ count_channel);
 		if(count_channel <= 1){ // first time relay on this channel - hence broadcast
-			var statement = 'SELECT p._id pid, u._id uid, u.nickname, u.avatar, p.content, p.create_time, p.n_view, p.type t, '
+			var statement = 'SELECT p._id pid, u._id uid, u.nickname, u.avatar, p.content, p.create_time, p.n_view, p.type t, p.channels, p.photos, '
 						+'c._id c_id, c._user_id c_owner_id, uu.nickname c_owner_nickname, uu.avatar c_owner_avatar, c.content c_content, '
 						+'(select count(c._id) from "Comment" c where c._entity_id = p._id) as no_comment, '
 						+'(select count(l._id) from "Like" l where l._entity_id = p._id) as no_like, '
@@ -442,6 +446,8 @@ create_post_relay = function(token, id, channel, callback) {
 						msg.i.l = parseInt(result.rows[i].no_like);
 						msg.i.c = parseInt(result.rows[i].no_comment);
 						msg.i.r = parseInt(result.rows[i].no_relay - 1);
+						msg.orgin = result.rows[i].channels[0];
+						msg.is_photos = (result.rows[i].photos != null && result.rows[i].photos.length > 0) ? true : false;
 						if(result.rows[i].c_id != null) {
 							//"tks":{"id" : answer_id, "owner" : {"id" : answer_owner_id, "nickname" : answer_owner_nickname, "avatar" : answer_owner_avatar} , "content" : answer_content}
 							msg.tks = {};
@@ -528,8 +534,9 @@ remove_comment_like = function(token, callback) {
 /*********************************************
 
 **********************************************/
-get_post_list = function(token, channels, from_id, callback) {
+get_post_list = function(token, channels, from_id, callback) { // by current location (channels)
 	var user_id = jsonwebtoken.decode(token)._id;
+	var current_channel = channels[0];
 	var channels_condition = ' channel like \''+channels[0]+'\'';
 	for(var i = 1; i < channels.length; i ++) {
 		channels_condition+=' OR' + ' channel like \''+channels[i]+'\'';
@@ -539,19 +546,30 @@ get_post_list = function(token, channels, from_id, callback) {
 		from_id_condition = ' AND p._id < ' + from_id;
 	}
 	//var statement = 'SELECT p._id pid, u._id uid, u.nickname, u.avatar, p.content, p.create_time, p.n_view,(select count(c._id) from "Comment" c where c._entity_id = p._id) as no_comment, (select count(l._id) from "Like" l where l._entity_id = p._id) as no_like, (select count(r._id) from "Relay" r where r._entity_id = p._id) as no_relay FROM "Post" p,"User" u WHERE  p._user_id = u._id AND p._id IN (SELECT distinct _entity_id FROM "Relay" WHERE' + channels_condition + ')';
-	var statement = 'SELECT p._id pid, u._id uid, u.nickname, u.avatar, p.content, p.create_time, p.n_view, p.type t, '
+	var statement = 'SELECT p._id pid, u._id uid, u.nickname, u.avatar, p.content, p.create_time, p.n_view, p.type t, p.channels, p.photos, '
 						+'c._id c_id, c._user_id c_owner_id, uu.nickname c_owner_nickname, uu.avatar c_owner_avatar, c.content c_content, '
 						+'(select count(c._id) from "Comment" c where c._entity_id = p._id) as no_comment, '
 						+'(select count(l._id) from "Like" l where l._entity_id = p._id) as no_like, '
 						+'(select count(r._id) from "Relay" r where r._entity_id = p._id) as no_relay, '
 						+'(select count(l._id) from "Like" l where l._entity_id = p._id AND l._user_id = '+user_id+') as no_my_like, '
 						+'(select count(r._id) from "Relay" r where r._entity_id = p._id AND r._user_id = '+user_id+') as no_my_relay '
+						//+'(select count(r._id) from "Relay" r where r._entity_id = p._id AND r.channel = \''+current_channel+'\') as no_current_channel '
 							+'FROM "User" u INNER JOIN "Post" p LEFT JOIN "User" uu JOIN "Comment" c ON (uu._id = c._user_id) '
 							+'ON (p._answer_id = c._id AND p._id = c._entity_id) ON (p._user_id = u._id) '
 							+'WHERE p._id IN (SELECT distinct _entity_id FROM "Relay" WHERE' + channels_condition + ')' + from_id_condition
 							+ ' ORDER BY p._id DESC LIMIT 10';
 	
-	
+	/*var statement = 'SELECT p._id pid, u._id uid, u.nickname, u.avatar, p.content, p.create_time, p.n_view, p.type t, p.channels, p.photos '
+						+'(select count(c._id) from "Comment" c where c._entity_id = p._id) as no_comment, '
+						+'(select count(l._id) from "Like" l where l._entity_id = p._id) as no_like, '
+						+'(select count(r._id) from "Relay" r where r._entity_id = p._id) as no_relay, '
+						+'(select count(l._id) from "Like" l where l._entity_id = p._id AND l._user_id = '+user_id+') as no_my_like, '
+						+'(select count(r._id) from "Relay" r where r._entity_id = p._id AND r._user_id = '+user_id+') as no_my_relay '
+						//+'(select count(r._id) from "Relay" r where r._entity_id = p._id AND r.channel = '+current_channel+') as no_current_channel '
+							+'FROM "User" u INNER JOIN "Post" p ON (p._user_id = u._id) '
+							+'WHERE p._id IN (SELECT distinct _entity_id FROM "Relay" WHERE' + channels_condition + ')' + from_id_condition
+							+ ' ORDER BY p._id DESC LIMIT 10';*/
+							
 	db.query(statement, function(err, result) {
 		if(err) return callback(err);
 		
@@ -574,6 +592,84 @@ get_post_list = function(token, channels, from_id, callback) {
 			msg.i.r = parseInt(result.rows[i].no_relay - 1);
 			msg.i.my_l = (parseInt(result.rows[i].no_my_like) === 0) ? false : true;
 			msg.i.my_r = (parseInt(result.rows[i].no_my_relay) === 0) ? false : true;
+			//msg.is_here = (parseInt(result.rows[i].no_current_channel) === 0) ? false : true;
+			msg.orgin = result.rows[i].channels[0];
+			msg.is_photos = (result.rows[i].photos != null && result.rows[i].photos.length > 0) ? true : false;
+			if(result.rows[i].c_id != null) {
+				//'tks':{'id' : answer_id, 'owner' : {'id' : answer_owner_id, 'nickname' : answer_owner_nickname, 'avatar' : answer_owner_avatar} , 'content' : answer_content}
+				msg.tks = {};
+				msg.tks.id = result.rows[i].c_id;
+				msg.tks.owner = {};
+				msg.tks.owner.id = result.rows[i].c_owner_id;
+				msg.tks.owner.nickname = result.rows[i].c_owner_nickname;
+				msg.tks.owner.avatar = result.rows[i].c_owner_avatar;
+				msg.tks.content = result.rows[i].c_content;
+			}
+			post_list.push(msg);
+			i++;
+		} 
+		callback(null, {retcode: 0, posts : post_list});
+	});
+}
+
+get_post_list_by_channel = function(token, channel, from_id, callback) {
+	var user_id = jsonwebtoken.decode(token)._id;
+	var current_channel = channel;
+	var channels_condition = ' p.channels @> ARRAY[\''+current_channel+'\']::character varying(64)[]';
+	var from_id_condition = '';
+	
+	if(from_id > 0) {
+		from_id_condition = ' AND p._id < ' + from_id;
+	}
+	//var statement = 'SELECT p._id pid, u._id uid, u.nickname, u.avatar, p.content, p.create_time, p.n_view,(select count(c._id) from "Comment" c where c._entity_id = p._id) as no_comment, (select count(l._id) from "Like" l where l._entity_id = p._id) as no_like, (select count(r._id) from "Relay" r where r._entity_id = p._id) as no_relay FROM "Post" p,"User" u WHERE  p._user_id = u._id AND p._id IN (SELECT distinct _entity_id FROM "Relay" WHERE' + channels_condition + ')';
+	var statement = 'SELECT p._id pid, u._id uid, u.nickname, u.avatar, p.content, p.create_time, p.n_view, p.type t, p.channels, p.photos, '
+						+'c._id c_id, c._user_id c_owner_id, uu.nickname c_owner_nickname, uu.avatar c_owner_avatar, c.content c_content, '
+						+'(select count(c._id) from "Comment" c where c._entity_id = p._id) as no_comment, '
+						+'(select count(l._id) from "Like" l where l._entity_id = p._id) as no_like, '
+						+'(select count(r._id) from "Relay" r where r._entity_id = p._id) as no_relay, '
+						+'(select count(l._id) from "Like" l where l._entity_id = p._id AND l._user_id = '+user_id+') as no_my_like, '
+						+'(select count(r._id) from "Relay" r where r._entity_id = p._id AND r._user_id = '+user_id+') as no_my_relay '
+							+'FROM "User" u INNER JOIN "Post" p LEFT JOIN "User" uu JOIN "Comment" c ON (uu._id = c._user_id) '
+							+'ON (p._answer_id = c._id AND p._id = c._entity_id) ON (p._user_id = u._id) '
+							+'WHERE p._id IN (SELECT distinct _entity_id FROM "Relay" WHERE' + channels_condition + ')' + from_id_condition
+							+ ' ORDER BY p._id DESC LIMIT 10';
+	
+	/*var statement = 'SELECT p._id pid, u._id uid, u.nickname, u.avatar, p.content, p.create_time, p.n_view, p.type t, p.channels, p.photos '
+						+'(select count(c._id) from "Comment" c where c._entity_id = p._id) as no_comment, '
+						+'(select count(l._id) from "Like" l where l._entity_id = p._id) as no_like, '
+						+'(select count(r._id) from "Relay" r where r._entity_id = p._id) as no_relay, '
+						+'(select count(l._id) from "Like" l where l._entity_id = p._id AND l._user_id = '+user_id+') as no_my_like, '
+						+'(select count(r._id) from "Relay" r where r._entity_id = p._id AND r._user_id = '+user_id+') as no_my_relay '
+						+'(select count(r._id) from "Relay" r where r._entity_id = p._id AND r.channel = '+current_channel+') as no_current_channel '
+							+'FROM "User" u INNER JOIN "Post" p ON (p._user_id = u._id) '
+							+'WHERE p._id IN (SELECT distinct _entity_id FROM "Relay" WHERE' + channels_condition + ')' + from_id_condition
+							+ ' ORDER BY p._id DESC LIMIT 10';*/
+							
+	db.query(statement, function(err, result) {
+		if(err) return callback(err);
+		
+		var i = 0;
+		var post_list = [];
+		while( i < result.rows.length) {
+			var msg = {'new' : true};
+			msg.type = result.rows[i].t === null? 0 : result.rows[i].t;
+			msg.id = result.rows[i].pid;
+			msg.owner = {};
+			msg.owner.id = result.rows[i].uid;
+			msg.owner.nickname = result.rows[i].nickname;
+			msg.owner.avatar = result.rows[i].avatar;
+			msg.content = result.rows[i].content;
+			msg.metadata = {};
+			msg.metadata.create_time = result.rows[i].create_time;
+			msg.i = {};
+			msg.i.l = parseInt(result.rows[i].no_like);
+			msg.i.c = parseInt(result.rows[i].no_comment);
+			msg.i.r = parseInt(result.rows[i].no_relay - 1);
+			msg.i.my_l = (parseInt(result.rows[i].no_my_like) === 0) ? false : true;
+			msg.i.my_r = (parseInt(result.rows[i].no_my_relay) === 0) ? false : true;
+			msg.is_here = (parseInt(result.rows[i].no_current_channel) === 0) ? false : true;
+			msg.is_orgin = (current_channel == result.rows[i].channels[0]) ? true : false;
+			msg.is_photos = (result.rows[i].photos.length > 0) ? true : false;
 			if(result.rows[i].c_id != null) {
 				//'tks':{'id' : answer_id, 'owner' : {'id' : answer_owner_id, 'nickname' : answer_owner_nickname, 'avatar' : answer_owner_avatar} , 'content' : answer_content}
 				msg.tks = {};
@@ -972,6 +1068,7 @@ module.exports = {
 	remove_comment_comment : remove_comment_comment,
 	remove_comment_like : remove_comment_like,
 	get_post_list : get_post_list,
+	get_post_list_by_channel : get_post_list_by_channel,
 	get_post_detail : get_post_detail,
 	get_post_comment_list : get_post_comment_list,
 	get_comment_comment : get_comment_comment,
